@@ -2,7 +2,7 @@
 
 This repository hosts a static HTML mockup built during a research scholarship. It serves as a live, interactive supplement to a research report and proposal.
 
-**[Click Here to View the Interactive Mockup](https://<YOUR-USERNAME>.github.io/<YOUR-REPO-NAME>/<YOUR-FOLDER-NAME>/)**
+**[Click Here to View the Interactive Mockup](https://r-k-mac.github.io/Portfolio-Projects/experiment-mockup/)**
 
 This mockup was created as a communication tool to demonstrate a proposed extension of existing data visualization research. Instead of just describing a user interface in my written report, I built this functional layout to visually demonstrate how alternative response modalities would look and behave for participants in a live study.
 
