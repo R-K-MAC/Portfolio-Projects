@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<meta charset="UTF-8">
+<title>Experiment</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #ffffff;
+    overflow: hidden;
+  }
+
+  .page {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+  .page.active {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Text pages (pg 1 and 2) */
+  .text-page {
+    align-items: center;
+    justify-content: center;
+    text-align: left;
+    padding: 5vh 10vw;
+  }
+  .text-content {
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 800px;
+    white-space: pre-wrap;
+  }
+  .continue-btn {
+    margin-top: 40px;
+    padding: 12px 32px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 4px;
+  }
+  .continue-btn:hover { background: #eee; }
+
+  /* Fixation cross page */
+  .fixation-page {
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+  }
+  .plus-sign {
+    font-size: 6rem;
+    line-height: 1;
+    color: #000000;
+    user-select: none;
+  }
+
+  /*  Image pages */
+  .image-page {
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+  }
+  .stimulus-image {
+    max-width: 80vw;
+    max-height: 80vh;
+    display: block;
+  }
+
+  /* Grey square page */
+  .square-page {
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+  }
+  .grey-square {
+    width: 80vmin;
+    height: 80vmin;
+    background: #808080;
+  }
+
+  /* Submit page */
+  .submit-page {
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    padding: 5vh 0;
+  }
+  .submit-btn {
+    padding: 12px 32px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border: 1px solid #333;
+    background: #fff;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  .submit-btn:hover { background: #eee; }
+
+   /* Draggable Line */
+.stimulus-wrapper {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+.perforation {
+  position: absolute;
+  right: 20px;
+  width: 490px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 5px;
+  padding: 5px 0;
+  cursor: move;
+}
+
+.perforation-line {
+  border-top:2px dashed black;
+  height:2px;
+  justify-content: space-between;
+}
+
+/* Horizontal slider*/
+.slider-container {
+  width: 520px;
+}
+.slider-value {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 30px;
+}
+.number-slider {
+  margin: 0 10px;
+}
+.slider-endpoints {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 1rem;
+  color: #333;
+}
+
+/* Text/Number Input */
+.number-input {
+  font-size: 2rem;
+  text-align: center;
+  width: 140px;
+  padding: 10px;
+  border: 1px solid #333;
+  border-radius: 2px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/* Vertical Number Slider */
+.vert-slider-container {
+  position: absolute;
+  right: 20px;
+  top: 40%;
+  transform: translateY(-50%);
+  height: 300px;
+  width: fit-content;
+}
+
+.vert-number-slider {
+  height: 300px;
+  margin: 0 auto;
+}
+
+.vert-slider-endpoints {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 300px;
+  margin-left: 10px;
+  font-size: 1rem;
+  color: #333;
+}
+
+
+
+</style>
+</head>
+<body>
+
+<!-- 
+     CONFIG values control:
+       - the text shown on pages 1 and 2
+       - image file paths
+       - timer durations in milliseconds
+     Everything below is just the page markup    -->
+
+<!-- PAGE 1: opening text page -->
+<div class="page text-page active" id="page-1">
+  <div class="text-content" id="page-1-text"></div>
+  <button class="continue-btn" onclick="goToPage(2)">Continue</button>
+</div>
+
+<!-- PAGE 2: instructions text page-->
+<div class="page text-page" id="page-2">
+  <div class="text-content" id="page-2-text"></div>
+  <button class="continue-btn" onclick="goToPage(3)">Continue</button>
+</div>
+
+<!-- PAGE 3: fixation cross, auto-advances after CONFIG.timers.page3 ms -->
+<div class="page fixation-page" id="page-3">
+  <div class="plus-sign">+</div>
+</div>
+
+<!-- PAGE 4: image 1 display, auto-advances after CONFIG.timers.page4 ms -->
+<div class="page image-page" id="page-4">
+  <img class="stimulus-image" id="page-4-image" src="" alt="">
+</div>
+
+<!-- PAGE 5: grey square, auto-advances after CONFIG.timers.page5 ms -->
+<div class="page square-page" id="page-5">
+  <div class="grey-square"></div>
+</div>
+
+<!-- PAGE 6: draggable line, image + Submit button -->
+<div class="page submit-page" id="page-6" data-interaction="draggableLine">
+  <div class="stimulus-wrapper">
+    <img class="stimulus-image" id="page-6-image" src="" alt="">
+    <div class="perforation">
+      <div class="perforation-line"></div>
+    </div>
+  </div>
+  <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+</div>
+
+
+<!-- PAGE 7: image 2 display, auto-advances after CONFIG.timers.page4 ms -->
+<div class="page image-page" id="page-7">
+  <img class="stimulus-image" id="page-7-image" src="" alt="">
+</div>
+
+<!-- PAGE 8: number slider, image + advance on Submit button -->
+<div class="page submit-page" id="page-8" data-interaction="numberSlider">
+  <img class="stimulus-image" id="page-8-image" src="" alt="">
+  <div class="slider-container">
+    <div class="slider-value">50</div>
+    <div class="number-slider"></div>
+    <div class="slider-endpoints">
+      <span>0</span>
+      <span>100</span>
+    </div>
+  </div>
+  <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+</div>
+
+
+<!-- PAGE 9: image 3 display, auto-advances after CONFIG.timers.page4 ms -->
+<div class="page image-page" id="page-9">
+  <img class="stimulus-image" id="page-9-image" src="" alt="">
+</div>
+
+<!-- PAGE 10: text box, image + Submit button -->
+<div class="page submit-page" id="page-10" data-interaction="numberInput">
+  <img class="stimulus-image" id="page-10-image" src="" alt="">
+  <input type="text" class="number-input" inputmode="numeric" maxlength="3" placeholder=" ">
+  <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+</div>
+
+<!-- PAGE 11: image 4 display, auto-advances after CONFIG.timers.page11 ms -->
+<div class="page image-page" id="page-11">
+  <img class="stimulus-image" id="page-11-image" src="" alt="">
+</div>
+
+<!-- PAGE 12: vertical number slider, image + advance on Submit button -->
+<div class="page submit-page" id="page-12" data-interaction="verticalSlider">
+  <div class="stimulus-wrapper">
+    <img class="stimulus-image" id="page-12-image" src="" alt="">
+    <div class="vert-slider-container">
+      <div class="slider-value">50</div>
+      <div class="vert-number-slider"></div>
+    </div>
+    </div>
+  <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+</div>
+
+<!-- PAGE 13: image 5 display, auto-advances after CONFIG.timers.page13 ms -->
+<div class="page image-page" id="page-13">
+  <img class="stimulus-image" id="page-13-image" src="" alt="">
+</div>
+
+<!-- PAGE 14: number slider, image + advance on Submit button -->
+<div class="page submit-page" id="page-14" data-interaction="numberSlider">
+  <img class="stimulus-image" id="page-14-image" src="" alt="">
+  <div class="slider-container">
+    <div class="slider-value">50</div>
+    <div class="number-slider"></div>
+    <div class="slider-endpoints">
+      <span>0</span>
+      <span>100</span>
+    </div>
+  </div>
+  <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+</div>
+
+<!-- PAGE 15: image 6 display, auto-advances after CONFIG.timers.page15 ms -->
+<div class="page image-page" id="page-15">
+  <img class="stimulus-image" id="page-15-image" src="" alt="">
+</div>
+
+<!-- PAGE 16: vertical number slider, image + advance on Submit button -->
+<div class="page submit-page" id="page-16" data-interaction="verticalSlider">
+  <div class="stimulus-wrapper">
+  <img class="stimulus-image" id="page-16-image" src="" alt="">
+  <div class="vert-slider-container">
+    <div class="slider-value">50</div>
+    <div class="vert-number-slider"></div>
+  </div>
+  </div>
+  <button class="submit-btn" onclick="handleSubmit()">Submit</button>
+</div>
+
+<!-- Final Page: end of experiment-->
+<div class="page text-page active" id="page-last">
+  <div class="text-content" id="last_page_text"></div>
+  <button class="continue-btn"  onclick="handleExit()">Finish</button>
+</div>
+
+
+
+<!-- jQuery for the response mode functionality 
+  
+  -- jQuery for the draggable line  -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
+<script>
+const CONFIG = {
+
+  // Text for pages 1 and 2. 
+  page1Text: "Project title:  Do Visual and Verbal Representations Bias Position Recall? \n\n Welcome to the experiment.\n\nPlease read the following instructions carefully.",
+  page2Text: "Please read the following consent statement: \n\n I have been asked to take part in the Monash University research project specified above. I have read and understood the Explanatory Statement and I hereby consent to participate in this project. \n\nI consent to the following: \n\n● I will participate in the experiment. \n\n● I understand that the only data collected will be my answers to the questions and the time taken for each part of the experiment. The researchers may also take informal notes.\n\n● I understand that I will always remain anonymous in any reports or publications from the project. \n\n● I understand that my participation is voluntary, and that I can withdraw without being penalized or disadvantaged in any way at any stage prior to the completion of the experiment.\n\nBy pressing continue and proceeding to participate in the experiment, I am acknowledging my consent to the above statements.",
+  lastpageText: "Thank you for participating. This is the end of the experiment.",
+
+  // Image file paths
+  page4Image: "chart_mockup_1_25.png",
+  page6Image: "blankchart.png",
+  page7Image: "chart_mockup_2_50.png",
+  page8Image: "blankchart.png",
+  page9Image: "chart_mockup_3_75.png",
+  page10Image: "blankchart.png",
+  page11Image: "chart_mockup_4_90.png",
+  page12Image: "blankchart.png",
+  page13Image: "chart_mockup_5_60.png",
+  page14Image: "blankchart.png",
+  page15Image: "chart_mockup_6_15.png",
+  page16Image: "blankchart.png",
+
+  // Timer durations in illiseconds
+  timers: {
+    page3: 1000,    // fixation cross duration
+    page4: 2000,   // first image duration
+    page5: 1000,   // grey square (mask) duration
+    page7: 2000,   // second image duration
+    page9: 2000,   // third image duration
+    page11: 2000,   // fourth image duration
+    page13: 2000,   // fifth image duration
+    page15: 2000,   // sixth image duration
+
+  },
+
+  // Order pages are shown by their element id suffix.
+  pageOrder: [1, 2, 3, 4, 5, 6, 3, 7, 5, 10, 3, 9, 5, 8, 3, 11, 5, 12, 3, 13, 5, 14, 3, 15, 5, 16, "last"]
+};
+
+const INTERACTIONS = {
+  draggableLine: setupDraggableLine,
+  numberSlider: setupNumberSlider,
+  numberInput: setupNumberInput,
+  verticalSlider: setupVerticalSlider
+};
+
+
+/* Core logic */
+
+let currentIndex = 0;
+let activeTimerId = null;
+
+function initPages() {
+  document.getElementById("page-1-text").textContent = CONFIG.page1Text;
+  document.getElementById("page-2-text").textContent = CONFIG.page2Text;
+  document.getElementById("page-4-image").src = CONFIG.page4Image;
+  document.getElementById("page-6-image").src = CONFIG.page6Image;
+  document.getElementById("page-7-image").src = CONFIG.page7Image;
+  document.getElementById("page-8-image").src = CONFIG.page8Image;
+  document.getElementById("page-9-image").src = CONFIG.page9Image;
+  document.getElementById("page-10-image").src = CONFIG.page10Image;
+  document.getElementById("page-11-image").src = CONFIG.page11Image;
+  document.getElementById("page-12-image").src = CONFIG.page12Image;
+  document.getElementById("page-13-image").src = CONFIG.page13Image;
+  document.getElementById("page-14-image").src = CONFIG.page14Image;
+  document.getElementById("page-15-image").src = CONFIG.page15Image;
+  document.getElementById("page-16-image").src = CONFIG.page16Image;
+  document.getElementById("last-page-text").textContent = CONFIG.lastpageText;
+}
+
+function showPage(pageNumber) {
+  // Hide all pages
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+
+  // Clear any pending auto-advance timer from the previous page
+  if (activeTimerId !== null) {
+    clearTimeout(activeTimerId);
+    activeTimerId = null;
+  }
+
+  const pageEl = document.getElementById("page-" + pageNumber);
+  if (!pageEl) {
+    console.error("No page found with id page-" + pageNumber);
+    return;
+  }
+  pageEl.classList.add("active");
+
+    // Reset sliders before initializing
+  $('.number-slider, .vert-number-slider').each(function() {
+    const $el = $(this);
+    if ($el.data('uiSlider')) {
+      $el.slider('destroy');
+    }
+  });
+  $('.slider-value').text('50');
+
+
+  //  data-interaction attribute look up
+  const interactionName = pageEl.dataset.interaction;
+  if (interactionName) {
+    const setupFn = INTERACTIONS[interactionName];
+    if (setupFn) {
+      if (!pageEl.dataset.interactionInitialized) {
+        setupFn();
+        pageEl.dataset.interactionInitialized = "true";
+      }
+    } else {
+      console.error(
+        'Page ' + pageNumber + ' has data-interaction="' + interactionName +
+        '", which has no matching entry in INTERACTIONS.'
+      );
+    }
+  }
+
+  // configured timer auto-advance
+  const timerKey = "page" + pageNumber;
+  if (CONFIG.timers.hasOwnProperty(timerKey)) {
+    const duration = CONFIG.timers[timerKey];
+    activeTimerId = setTimeout(() => {
+      goToNext();
+    }, duration);
+  }
+}
+
+function goToPage(pageNumber) {
+  const idx = CONFIG.pageOrder.indexOf(pageNumber);
+  if (idx === -1) {
+    console.error("Page " + pageNumber + " is not in CONFIG.pageOrder");
+    return;
+  }
+  currentIndex = idx;
+  showPage(pageNumber);
+}
+
+function goToNext() {
+  currentIndex++;
+  if (currentIndex >= CONFIG.pageOrder.length) {
+    console.log("Experiment complete — no more pages in pageOrder.");
+    return;
+  }
+  showPage(CONFIG.pageOrder[currentIndex]);
+}
+
+  // Called when the Submit button is pressed.
+function handleSubmit() {
+  console.log("Submit pressed");
+  goToNext();
+}
+
+
+
+// functions for response modality//
+function setupDraggableLine() {
+  const handle = document.querySelector('.perforation');
+  if (!handle) return;
+
+  const wrapper = handle.closest('.stimulus-wrapper');
+  if (!wrapper) return;
+
+  let dragging = false;
+
+  function getClientY(event) {
+    return event.touches ? event.touches[0].clientY : event.clientY;
+  }
+
+  function startDrag(event) {
+    dragging = true;
+    event.preventDefault();
+  }
+
+  function moveDrag(event) {
+    if (!dragging) return;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const handleHeight = handle.offsetHeight;
+    let relativeY = getClientY(event) - wrapperRect.top;
+    const minY = handleHeight / 2;
+    const maxY = wrapperRect.height - handleHeight / 2;
+    relativeY = Math.max(minY, Math.min(maxY, relativeY));
+    handle.style.top = relativeY + 'px';
+  }
+
+  function endDrag() {
+    dragging = false;
+  }
+
+  handle.addEventListener('mousedown', startDrag);
+  handle.addEventListener('touchstart', startDrag, { passive: false });
+  document.addEventListener('mousemove', moveDrag);
+  document.addEventListener('touchmove', moveDrag, { passive: false });
+  document.addEventListener('mouseup', endDrag);
+  document.addEventListener('touchend', endDrag);
+}
+
+function setupNumberSlider() {
+  $('.number-slider').slider({
+    min: 0,
+    max: 100,
+    value: 50,          // starting position
+    slide: function(event, ui) {
+      $('.slider-value').text(ui.value);
+    }
+  });
+
+
+  // force reset
+  $(page).find('.number-slider').slider('value', 50);
+  $(page).find('.slider-value').text('50');
+}
+
+function setupVerticalSlider() {
+  $('.vert-number-slider').slider({
+    min: 0,
+    max: 100,
+    value: 50,
+    orientation: "vertical",
+    slide: function(event, ui) {
+      $('.slider-value').text(ui.value);
+    }
+  });
+
+    // force reset
+  $(page).find('.vert-number-slider').slider('value', 50);
+  $(page).find('.slider-value').text('50');
+}
+
+function setupNumberInput() {
+  const input = $('.number-input');
+
+  input.on('input', function() {
+    let val = $(this).val();
+
+    val = val.replace(/[^0-9]/g, '');
+
+    if (val !== '') {
+      let num = parseInt(val, 10);
+      if (num > 100) num = 100;
+      val = String(num);
+    }
+
+    $(this).val(val);
+  });
+}
+
+function handleExit() {
+  window.close();
+}
+
+
+initPages();
+showPage(CONFIG.pageOrder[currentIndex]);
+</script>
+
+</body>
+</html>
